@@ -8,13 +8,12 @@ export const isSupabaseConfigured = Boolean(url && anonKey)
 
 /**
  * Fetch wrapper that rewrites absolute Supabase URLs to the same-origin
- * /sbapi proxy (see vite.config.ts). This keeps embedded preview contexts
- * from making direct cross-origin calls that external auth layers can
- * intercept, and works identically in a normal browser.
+ * /sbapi proxy during local Vite development. Production deployments use
+ * the Supabase URL directly because Vercel does not provide this dev proxy.
  */
 function proxiedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const doFetch = (value: RequestInfo | URL, options?: RequestInit) => fetch(value, options)
-  if (url) {
+  if (import.meta.env.DEV && url) {
     try {
       let raw: string
       if (typeof input === 'string') raw = input
