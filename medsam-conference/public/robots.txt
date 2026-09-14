@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /confirmation
+
+Sitemap: https://YOUR-DOMAIN.example.com/sitemap.xml

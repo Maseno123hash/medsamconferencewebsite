@@ -1,0 +1,33 @@
+{
+  "name": "medsam-scientific-conference",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MEDSAM Scientific Conference & Symposium 2027 — registration, abstracts, and conference management platform",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.452.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.6",
+    "@types/node": "^26.5.1",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "tailwindcss": "^4.0.6",
+    "typescript": "~5.6.2",
+    "vite": "^5.4.9"
+  }
+}
