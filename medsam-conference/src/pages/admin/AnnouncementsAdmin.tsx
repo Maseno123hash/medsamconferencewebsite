@@ -65,8 +65,8 @@ export default function AnnouncementsAdmin() {
       setErr('Please enter a short announcement title.')
       return
     }
-    if (form.body.trim().length < 10) {
-      setErr('Please write the announcement text (min. 10 characters).')
+    if (form.body.trim().length < 200) {
+      setErr('Please write the announcement text (min. 200 characters).')
       return
     }
     setBusy(true)
