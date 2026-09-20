@@ -31,7 +31,7 @@ export const MAIN_CONFERENCE = {
 
 export const CONTACT = {
   team: 'MEDSAM Scientific Conference & Symposium Organizing Team',
-  email: 'medsamscientifcconferenceorga@gmail.com',
+  email: 'medsamscientificconferenceorga@gmail.com',
   phones: ['+254 115 705 403', '+254 742 332 660'],
   institution: 'Maseno University School of Medicine',
 } as const
