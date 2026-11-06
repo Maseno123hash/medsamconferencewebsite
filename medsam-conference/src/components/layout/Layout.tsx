@@ -14,59 +14,112 @@ function ScrollToTop() {
   return null
 }
 
-/** Urgent announcements strip — driven by the announcements table (admin-managed). */
+/** Rotating announcement ticker — displays all admin-managed active announcements. */
 function AnnouncementBar() {
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [dismissed, setDismissed] = useState(false)
 
+  // Fetch all active announcements within their scheduled date ranges.
   useEffect(() => {
     if (!supabase || dismissed) return
+
     let mounted = true
     const now = new Date().toISOString()
+
     supabase
       .from('announcements')
       .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(1)
       .then(({ data }) => {
         if (!mounted) return
+
         const rows = (data ?? []) as Announcement[]
-        const active = rows.find((a) => (!a.starts_at || a.starts_at <= now) && (!a.ends_at || a.ends_at >= now))
-        if (active) setAnnouncement(active)
+
+        const active = rows.filter(
+          (a) =>
+            (!a.starts_at || a.starts_at <= now) &&
+            (!a.ends_at || a.ends_at >= now),
+        )
+
+        setAnnouncements(active)
+        setCurrentIndex(0)
       })
+
     return () => {
       mounted = false
     }
-  }, [supabase, dismissed])
+  }, [dismissed])
 
-  if (!isSupabaseConfigured || dismissed || !announcement) return null
+  // Rotate to the next announcement every 6 seconds.
+  useEffect(() => {
+    if (announcements.length <= 1 || dismissed) return
 
+    const interval = window.setInterval(() => {
+      setCurrentIndex((index) => (index + 1) % announcements.length)
+    }, 6000)
+
+    return () => window.clearInterval(interval)
+  }, [announcements.length, dismissed])
+
+  if (
+    !isSupabaseConfigured ||
+    dismissed ||
+    announcements.length === 0
+  ) {
+    return null
+  }
+
+  const announcement = announcements[currentIndex]
   const urgent = announcement.type === 'urgent'
 
   return (
-    <div className={`no-print border-b ${urgent ? 'border-red-300 bg-red-50' : 'border-gold-300 bg-gold-50'}`}>
-      <div className="container-x flex items-center gap-3 py-2.5">
-        <Megaphone size={17} className={`shrink-0 ${urgent ? 'text-red-600' : 'text-gold-700'}`} />
-        <p className={`min-w-0 flex-1 truncate text-xs font-semibold sm:text-sm ${urgent ? 'text-red-900' : 'text-navy-950'}`}>
-          <span className="mr-1.5 rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold uppercase">
+    <div
+      className={`no-print flex items-center border-b ${
+        urgent
+          ? 'border-red-300 bg-red-50'
+          : 'border-gold-300 bg-gold-50'
+      }`}
+    >
+      <Megaphone
+        size={17}
+        className={`ml-4 shrink-0 ${
+          urgent ? 'text-red-600' : 'text-gold-700'
+        }`}
+      />
+
+      <div className="min-w-0 flex-1 overflow-hidden py-2.5">
+        <div
+          className={`announcement-track text-xs font-semibold sm:text-sm ${
+            urgent ? 'text-red-900' : 'text-navy-950'
+          }`}
+        >
+          <span className="mr-2 rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold uppercase">
             {announcement.type}
           </span>
-          {announcement.title}: {announcement.body}
-        </p>
-        {announcement.type === 'abstract' && (
-          <a href="/abstracts" className="hidden items-center gap-1 text-xs font-bold text-gold-700 hover:underline sm:flex">
-            Submit <ExternalLink size={12} />
-          </a>
-        )}
-        <button
-          onClick={() => setDismissed(true)}
-          className="shrink-0 rounded p-1 text-slate-500 transition-colors hover:bg-black/5"
-          aria-label="Dismiss announcement"
-        >
-          <X size={15} />
-        </button>
+
+          <strong>{announcement.title}:</strong>
+          <span className="ml-2">{announcement.body}</span>
+
+          {announcement.type === 'abstract' && (
+            <a
+              href="/abstracts"
+              className="ml-4 font-bold text-gold-700 underline"
+            >
+              Submit your abstract
+            </a>
+          )}
+        </div>
       </div>
+
+      <button
+        onClick={() => setDismissed(true)}
+        className="mx-3 shrink-0 rounded p-1 text-slate-500 transition-colors hover:bg-black/5"
+        aria-label="Dismiss announcement"
+      >
+        <X size={15} />
+      </button>
     </div>
   )
 }

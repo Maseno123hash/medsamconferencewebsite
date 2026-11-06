@@ -7,10 +7,18 @@ import { Button } from '../components/ui/Button'
 import { FileUpload } from '../components/ui/FileUpload'
 import { ErrorState } from '../components/ui/Feedback'
 import { useToast } from '../components/ui/Toast'
+import { useConfig } from '../hooks/useAdminAuth'
 import { requireSupabase, isSupabaseConfigured } from '../lib/supabase'
 import { uploadToBucket } from '../hooks/useCrud'
 import { TRACKS } from '../lib/constants'
-import { isValidEmail, isValidPhone, generateRef, PDF_TYPES, formatDateTime } from '../lib/utils'
+import {
+  isValidEmail,
+  isValidPhone,
+  generateRef,
+  PDF_TYPES,
+  formatDateTime,
+  formatMoney,
+} from '../lib/utils'
 
 interface FormState {
   author_name: string
@@ -47,6 +55,7 @@ const INITIAL: FormState = {
  */
 export default function Abstracts() {
   const { notify } = useToast()
+  const { config } = useConfig()
   const [form, setForm] = useState<FormState>(INITIAL)
   const [pdf, setPdf] = useState<File | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState | 'pdf', string>>>({})
@@ -359,6 +368,36 @@ export default function Abstracts() {
 
           {/* Sidebar */}
           <aside className="space-y-6">
+            {/* Abstract fee and deadline */}
+<div className="card border-l-4 border-gold-500 p-6">
+  <h3 className="text-sm font-black tracking-[0.18em] text-navy-950 uppercase">
+    Submission information
+  </h3>
+
+  <div className="mt-4 space-y-4">
+    <div>
+      <p className="text-xs font-semibold text-slate-500">
+        Abstract submission fee
+      </p>
+      <p className="mt-1 text-lg font-black text-navy-950">
+        {config.abstractFee === null
+          ? 'To be announced'
+          : formatMoney(config.abstractFee, config.abstractFeeCurrency)}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-semibold text-slate-500">
+        Submission deadline
+      </p>
+      <p className="mt-1 text-sm font-bold text-navy-950">
+        {config.abstractSubmissionDeadline
+          ? formatDateTime(config.abstractSubmissionDeadline)
+          : 'To be announced'}
+      </p>
+    </div>
+  </div>
+</div>
             <div className="card p-6">
               <h3 className="text-sm font-black tracking-[0.18em] text-gold-700 uppercase">Good to know</h3>
               <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-slate-600">
@@ -366,7 +405,7 @@ export default function Abstracts() {
                 <li>• One abstract per scientific track. You may submit more than one abstract.</li>
                 <li>• Accepted authors must register for the conference to present.</li>
                 <li>• Review outcomes are communicated by email.</li>
-                <li>• The final abstract deadline is announced by the Secretariat.</li>
+                <li>• The Scientific Committee makes the final decision on presentation type.</li>
               </ul>
             </div>
             <div className="rounded-2xl bg-navy-950 p-6 text-white">

@@ -125,3 +125,23 @@ body {
     border: none !important;
   }
 }
+/* Announcement ticker */
+@keyframes announcement-scroll {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.announcement-track {
+  display: inline-flex;
+  white-space: nowrap;
+  min-width: 100%;
+  animation: announcement-scroll 25s linear infinite;
+}
+
+.announcement-track:hover {
+  animation-play-state: paused;
+}

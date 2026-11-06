@@ -28,7 +28,7 @@ import { Seo } from '../components/ui/Seo'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { TracksGrid } from '../components/public/TracksSection'
 import { CountdownTimer } from '../components/ui/CountdownTimer'
-import { AWARDS, CONFERENCE, MAIN_CONFERENCE, TRACKS } from '../lib/constants'
+import { AWARDS, CONFERENCE } from '../lib/constants'
 import { useConfig } from '../hooks/useAdminAuth'
 import { formatMoney, formatDate } from '../lib/utils'
 import hallImg from '../assets/images/conference/main-hall.jpg'
@@ -68,15 +68,35 @@ const COMPONENT_ICONS = [
   { Icon: UsersRound, title: 'Networking' },
   { Icon: UserCheck, title: 'Mentorship' },
 ]
+function formatEventDate(value: string): string {
+  if (!value) return 'To be announced'
 
+  const normalized = value.length === 16 ? `${value}:00` : value
+  const timestamp = new Date(`${normalized}+03:00`)
+
+  if (Number.isNaN(timestamp.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Nairobi',
+  }).format(timestamp)
+}
+
+function formatEventRange(startAt: string, endAt: string): string {
+  if (!startAt) return 'Date to be announced'
+  if (!endAt) return formatEventDate(startAt)
+
+  return `${formatEventDate(startAt)} – ${formatEventDate(endAt)}`
+}
 export default function Conference() {
   const { config } = useConfig()
 
   return (
     <>
       <Seo
-        title="Main Conference"
-        description="MEDSAM Main Conference & Symposium, 12–13 March 2027 at Maseno University Amphitheatre (South Wing). Keynotes, oral and poster presentations, panels, innovation showcase and more — 300+ delegates expected."
+        title={config.conference.title}
+        description={`${config.conference.title} — ${config.conference.theme || 'Conference theme to be announced'}. ${formatEventRange(config.conference.startAt, config.conference.endAt)}. ${config.conference.venue || 'Venue to be announced'}.`}
       />
 
       {/* Hero */}
@@ -85,17 +105,20 @@ export default function Conference() {
         <div className="absolute inset-0 bg-gradient-to-b from-navy-950/80 via-navy-950/70 to-navy-950" />
         <div className="container-x relative py-20 md:py-24">
           <span className="eyebrow-light">The Main Event</span>
-          <h1 className="h-display max-w-3xl text-white">{MAIN_CONFERENCE.name}</h1>
+          <h1 className="h-display max-w-3xl text-white">{config.conference.title}</h1>
+                    <p className="mt-4 max-w-2xl text-lg font-medium text-gold-300">
+            {config.conference.theme || 'Conference theme to be announced'}
+          </p>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-navy-100">
             An academic, scientific and innovation platform where {CONFERENCE.attendance.toLowerCase()} will
             exchange ideas, present research and build partnerships.
           </p>
           <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm font-semibold text-white">
             <span className="flex items-center gap-2.5">
-              <CalendarDays size={18} className="text-gold-400" /> {MAIN_CONFERENCE.dateLabel}
+              <CalendarDays size={18} className="text-gold-400" /> {formatEventRange(config.conference.startAt, config.conference.endAt)}
             </span>
             <span className="flex items-center gap-2.5">
-              <MapPin size={18} className="text-gold-400" /> {MAIN_CONFERENCE.venue}
+              <MapPin size={18} className="text-gold-400" /> {config.conference.venue || 'Venue to be announced'}
             </span>
             <span className="flex items-center gap-2.5">
               <Users size={18} className="text-gold-400" /> {CONFERENCE.attendance}
@@ -160,7 +183,7 @@ export default function Conference() {
         <div className="container-x">
           <SectionHeading
             eyebrow="Key Components"
-            title="What happens over the two days"
+            title={`What happens during ${config.conference.title}`}
             subtitle="From the opening ceremony to the awards, every session is designed for scientific exchange and connection."
           />
           <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
@@ -221,11 +244,11 @@ export default function Conference() {
         <div className="container-x grid gap-10 lg:grid-cols-2">
           <div>
             <CountdownTimer
-              targetIso={MAIN_CONFERENCE.startIso}
-              title="Main Conference Countdown"
-              subtitle={MAIN_CONFERENCE.dateLabel}
-              pastMessage="The conference is underway or has concluded — thank you to all our delegates!"
-            />
+            event={config.conference}
+            title={config.conference.title}
+            subtitle={config.conference.venue}
+            pastMessage="The conference has concluded. Thank you to all our delegates!"
+          />
           </div>
           <div className="card p-7">
             <h3 className="text-lg font-bold text-navy-950">Registration fees</h3>

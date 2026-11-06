@@ -264,22 +264,45 @@ export interface SocialLinks {
   linkedin: string
   website: string
 }
+export type EventStatus = 'scheduled' | 'postponed' | 'completed'
 
+export interface EventConfig {
+  title: string
+  theme: string
+  startAt: string
+  endAt: string
+  venue: string
+  registrationOpensAt: string
+  registrationClosesAt: string
+  status: EventStatus
+}
 export interface SiteConfig {
   currency: string
+  abstractFee: number | null // null = fee to be confirmed by Secretariat
+  abstractFeeCurrency: string
+  abstractSubmissionDeadline: string | null
   studentStandard: number
   nonStudentStandard: number
   earlyBirdStudent: number
   earlyBirdNonStudent: number | null // null = not offered to non-students
   earlyBirdDeadline: string | null
   workshopFee: number | null // null = fee to be confirmed by Secretariat
+  organisationName: string
+  teamName: string
+  institutionName: string
+  campus: string
   socials: SocialLinks
   contactEmail: string
   contactPhones: string[]
+  workshop: EventConfig
+  conference: EventConfig
 }
 
 export const DEFAULT_CONFIG: SiteConfig = {
   currency: 'USD',
+  abstractFee: null,
+  abstractFeeCurrency: 'KES',
+  abstractSubmissionDeadline: null,
   studentStandard: 50,
   nonStudentStandard: 90,
   earlyBirdStudent: 40,
@@ -294,6 +317,30 @@ export const DEFAULT_CONFIG: SiteConfig = {
     linkedin: '',
     website: '',
   },
-  contactEmail: 'medsamscientifcconferenceorga@gmail.com',
+  organisationName: 'Medical Students’ Association of Maseno University (MEDSAM)',
+  teamName: 'MEDSAM Scientific Conference & Symposium Organizing Team',
+  institutionName: 'Maseno University School of Medicine',
+  campus: 'Siriba Campus, Maseno University',
+  contactEmail: 'medsamscientificconferenceorga@gmail.com',
   contactPhones: ['+254 115 705 403', '+254 742 332 660'],
+  workshop: {
+  title: 'MEDSAM Pre-Conference Workshop',
+  theme: '',
+  startAt: '',
+  endAt: '',
+  venue: '',
+  registrationOpensAt: '',
+  registrationClosesAt: '',
+  status: 'scheduled',
+},
+conference: {
+  title: 'MEDSAM Scientific Conference & Symposium',
+  theme: '',
+  startAt: '',
+  endAt: '',
+  venue: '',
+  registrationOpensAt: '',
+  registrationClosesAt: '',
+  status: 'scheduled',
+},
 }

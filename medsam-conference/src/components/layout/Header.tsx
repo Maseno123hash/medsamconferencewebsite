@@ -3,8 +3,9 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { Menu, X, CalendarDays, ChevronDown, Send, Mail } from 'lucide-react'
 import { MedsamLogo } from '../ui/MedsamLogo'
 import { SocialLinks } from './SocialLinks'
-import { CONTACT } from '../../lib/constants'
+
 import { cn } from '../../lib/utils'
+import { useConfig } from '../../hooks/useAdminAuth'
 
 const NAV = [
   { to: '/', label: 'Home' },
@@ -27,12 +28,34 @@ const PARTICIPATE = [
   { to: '/partners', label: 'Our Partners', desc: 'Institutional & partner organisations' },
   { to: '/social', label: 'Follow Us — Socials', desc: 'Official MEDSAM channels' },
 ]
+function formatEventDate(value: string): string {
+  if (!value) return 'Date TBA'
 
+  const normalized = value.length === 16 ? `${value}:00` : value
+  const date = new Date(`${normalized}+03:00`)
+
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Africa/Nairobi',
+  }).format(date)
+}
+
+function formatEventRange(startAt: string, endAt: string): string {
+  if (!startAt) return 'Date TBA'
+  if (!endAt) return formatEventDate(startAt)
+
+  return `${formatEventDate(startAt)} – ${formatEventDate(endAt)}`
+}
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [participateOpen, setParticipateOpen] = useState(false)
   const location = useLocation()
+  const { config } = useConfig()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -51,16 +74,21 @@ export function Header() {
       {/* Top info bar */}
       <div className="bg-navy-950 text-white">
         <div className="container-x flex h-9 items-center justify-between text-[11px] font-medium sm:text-xs">
-          <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-1.5 text-navy-100 transition-colors hover:text-gold-300">
-            <Mail size={13} className="text-gold-400" />
-            <span className="hidden sm:inline">{CONTACT.email}</span>
-            <span className="sm:hidden">Email us</span>
-          </a>
+          <a
+  href={`mailto:${config.contactEmail}`}
+  className="flex items-center gap-1.5 text-navy-100 transition-colors hover:text-gold-300"
+>
+  <Mail size={13} className="text-gold-400" />
+  <span className="hidden sm:inline">{config.contactEmail}</span>
+  <span className="sm:hidden">Email us</span>
+</a>
           <div className="flex items-center gap-4">
-            <span className="hidden items-center gap-1.5 text-navy-100 md:flex">
+           <span className="hidden items-center gap-1.5 text-navy-100 md:flex">
               <CalendarDays size={13} className="text-gold-400" />
-              12–13 March 2027 · Maseno University
-            </span>
+              {formatEventRange(config.conference.startAt, config.conference.endAt)}
+              {' · '}
+              {config.conference.venue || 'Venue TBA'}
+            </span> 
             <SocialLinks size={13} />
           </div>
         </div>

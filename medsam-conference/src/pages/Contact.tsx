@@ -5,9 +5,10 @@ import { Field, Input, Textarea } from '../components/ui/FormControls'
 import { Button } from '../components/ui/Button'
 import { useToast } from '../components/ui/Toast'
 import { requireSupabase, isSupabaseConfigured } from '../lib/supabase'
-import { CONTACT, CONFERENCE } from '../lib/constants'
+import { useConfig } from '../hooks/useAdminAuth'
 import { isValidEmail, isValidPhone } from '../lib/utils'
 import { SocialLinks } from '../components/layout/SocialLinks'
+import { config } from 'process'
 
 interface FormState {
   name: string
@@ -25,6 +26,7 @@ const INITIAL: FormState = { name: '', email: '', phone: '', subject: '', messag
  */
 export default function Contact() {
   const { notify } = useToast()
+  const { config } = useConfig()
   const [form, setForm] = useState<FormState>(INITIAL)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -103,19 +105,19 @@ export default function Contact() {
               <h2 className="flex items-center gap-2.5 text-base font-bold text-navy-950">
                 <Building2 size={19} className="text-gold-600" /> Organising Team
               </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">{CONTACT.team}</p>
-              <p className="mt-2 text-xs font-semibold text-slate-500">{CONTACT.institution}</p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">{config.teamName}</p>
+              <p className="mt-2 text-xs font-semibold text-slate-500">{config.institutionName}</p>
             </div>
-            <a href={`mailto:${CONTACT.email}`} className="card card-hover flex items-center gap-4 p-5">
+            <a href={`mailto:${config.contactEmail}`} className="card card-hover flex items-center gap-4 p-5">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-gold-400">
                 <Mail size={21} />
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-black tracking-[0.18em] text-slate-400 uppercase">Email</p>
-                <p className="truncate text-sm font-bold text-navy-950 hover:text-gold-700">{CONTACT.email}</p>
+                <p className="truncate text-sm font-bold text-navy-950 hover:text-gold-700">{config.contactEmail}</p>
               </div>
             </a>
-            {CONTACT.phones.map((p) => (
+            {config.contactPhones.map((p) => (
               <a key={p} href={`tel:${p.replace(/\s/g, '')}`} className="card card-hover flex items-center gap-4 p-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-navy-900 text-gold-400">
                   <Phone size={21} />
@@ -132,8 +134,11 @@ export default function Contact() {
               </div>
               <div>
                 <p className="text-[11px] font-black tracking-[0.18em] text-slate-400 uppercase">Venue</p>
-                <p className="text-sm font-bold text-navy-950">{CONFERENCE.venue}</p>
-                <p className="text-xs text-slate-500">{CONFERENCE.campus}</p>
+                <p className="text-sm font-bold text-navy-950">
+                  {config.conference.venue || 'Venue to be announced'}
+                </p>
+                <p className="text-xs text-slate-500">{config.campus}</p>
+                <p className="text-xs text-slate-500">{config.institutionName}</p>
               </div>
             </div>
             <div className="card flex items-center gap-4 p-5">
@@ -166,7 +171,12 @@ export default function Contact() {
                   <p className="text-sm leading-relaxed text-slate-700">
                     Thank you, <strong>{form.name}</strong>. Your message has been received and will be reviewed
                     by the organising team. For urgent matters, please call{' '}
-                    <a className="font-bold text-navy-800 underline" href={`tel:${CONTACT.phones[0].replace(/\s/g, '')}`}>{CONTACT.phones[0]}</a>.
+                    <a
+                      className="font-bold text-navy-800 underline"
+                      href={`tel:${(config.contactPhones[0] || '').replace(/\s/g, '')}`}
+                    >
+                      {config.contactPhones[0] || 'our contact number'}
+                    </a>
                   </p>
                   <button
                     onClick={() => { setDone(false); setForm(INITIAL) }}

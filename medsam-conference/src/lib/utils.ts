@@ -103,30 +103,106 @@ export function downloadTextFile(filename: string, content: string, mime = 'text
 }
 
 /** Merge stored config JSONB with safe defaults. */
+/** Merge stored config JSONB with safe defaults. */
 export function parseConfig(raw: unknown): SiteConfig {
-  const base: SiteConfig = { ...DEFAULT_CONFIG, socials: { ...DEFAULT_CONFIG.socials }, contactPhones: [...DEFAULT_CONFIG.contactPhones] }
+  const base: SiteConfig = {
+    ...DEFAULT_CONFIG,
+    socials: { ...DEFAULT_CONFIG.socials },
+    contactPhones: [...DEFAULT_CONFIG.contactPhones],
+    workshop: { ...DEFAULT_CONFIG.workshop },
+    conference: { ...DEFAULT_CONFIG.conference },
+  }
+
   if (!raw || typeof raw !== 'object') return base
+
   const r = raw as Record<string, unknown>
-  const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback)
-  const numOrNull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
-  const str = (v: unknown, fallback: string) => (typeof v === 'string' ? v : fallback)
+
+  const num = (v: unknown, fallback: number) =>
+    typeof v === 'number' && Number.isFinite(v) ? v : fallback
+
+  const numOrNull = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
+
+  const str = (v: unknown, fallback: string) =>
+    typeof v === 'string' ? v : fallback
+
+  const parseEvent = (
+    value: unknown,
+    fallback: SiteConfig['workshop'],
+  ): SiteConfig['workshop'] => {
+    const event =
+      value && typeof value === 'object'
+        ? (value as Record<string, unknown>)
+        : {}
+
+    const status = event.status
+
+    return {
+      title: str(event.title, fallback.title),
+      theme: str(event.theme, fallback.theme),
+      startAt: str(event.startAt, fallback.startAt),
+      endAt: str(event.endAt, fallback.endAt),
+      venue: str(event.venue, fallback.venue),
+      registrationOpensAt: str(
+        event.registrationOpensAt,
+        fallback.registrationOpensAt,
+      ),
+      registrationClosesAt: str(
+        event.registrationClosesAt,
+        fallback.registrationClosesAt,
+      ),
+      status:
+        status === 'scheduled' ||
+        status === 'postponed' ||
+        status === 'completed'
+          ? status
+          : fallback.status,
+    }
+  }
+
+  const socials =
+    r.socials && typeof r.socials === 'object'
+      ? (r.socials as Record<string, unknown>)
+      : {}
+
   return {
     currency: str(r.currency, base.currency),
+    abstractFee: numOrNull(r.abstractFee),
+    abstractFeeCurrency: str(r.abstractFeeCurrency, base.abstractFeeCurrency),
+    abstractSubmissionDeadline:
+      typeof r.abstractSubmissionDeadline === 'string'
+        ? r.abstractSubmissionDeadline
+        : base.abstractSubmissionDeadline,
     studentStandard: num(r.studentStandard, base.studentStandard),
     nonStudentStandard: num(r.nonStudentStandard, base.nonStudentStandard),
     earlyBirdStudent: num(r.earlyBirdStudent, base.earlyBirdStudent),
     earlyBirdNonStudent: numOrNull(r.earlyBirdNonStudent),
-    earlyBirdDeadline: typeof r.earlyBirdDeadline === 'string' ? r.earlyBirdDeadline : base.earlyBirdDeadline,
+    earlyBirdDeadline:
+      typeof r.earlyBirdDeadline === 'string'
+        ? r.earlyBirdDeadline
+        : base.earlyBirdDeadline,
     workshopFee: numOrNull(r.workshopFee),
+
     socials: {
-      facebook: str((r.socials as Record<string, unknown>)?.facebook ?? '', base.socials.facebook),
-      instagram: str((r.socials as Record<string, unknown>)?.instagram ?? '', base.socials.instagram),
-      x: str((r.socials as Record<string, unknown>)?.x ?? '', base.socials.x),
-      youtube: str((r.socials as Record<string, unknown>)?.youtube ?? '', base.socials.youtube),
-      linkedin: str((r.socials as Record<string, unknown>)?.linkedin ?? '', base.socials.linkedin),
-      website: str((r.socials as Record<string, unknown>)?.website ?? '', base.socials.website),
+      facebook: str(socials.facebook, base.socials.facebook),
+      instagram: str(socials.instagram, base.socials.instagram),
+      x: str(socials.x, base.socials.x),
+      youtube: str(socials.youtube, base.socials.youtube),
+      linkedin: str(socials.linkedin, base.socials.linkedin),
+      website: str(socials.website, base.socials.website),
     },
+    organisationName: str(r.organisationName, base.organisationName),
+    teamName: str(r.teamName, base.teamName),
+    institutionName: str(r.institutionName, base.institutionName),
+    campus: str(r.campus, base.campus),
+
     contactEmail: str(r.contactEmail, base.contactEmail),
-    contactPhones: Array.isArray(r.contactPhones) ? (r.contactPhones as string[]) : base.contactPhones,
+        contactPhones: Array.isArray(r.contactPhones)
+      ? r.contactPhones.filter(
+          (phone): phone is string => typeof phone === 'string',
+        )
+      : base.contactPhones,
+    workshop: parseEvent(r.workshop, base.workshop),
+    conference: parseEvent(r.conference, base.conference),
   }
 }

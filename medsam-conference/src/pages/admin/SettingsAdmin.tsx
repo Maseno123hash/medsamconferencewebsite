@@ -6,13 +6,93 @@ import { Field, Input } from '../../components/ui/FormControls'
 import { useToast } from '../../components/ui/Toast'
 import { useConfig } from '../../hooks/useAdminAuth'
 import { requireSupabase } from '../../lib/supabase'
-import type { SiteConfig } from '../../lib/types'
+import type { SiteConfig, EventConfig } from '../../lib/types'
 
 /**
  * Site configuration — stored in the public.config table (key = 'site').
  * Controls: registration fees, early-bird deadline (configurable, NOT
  * hard-coded), workshop fee, social media links, contact details.
  */
+function EventFields({
+  heading,
+  value,
+  onChange,
+}: {
+  heading: string
+  value: EventConfig
+  onChange: (updated: EventConfig) => void
+}) {
+  const update = (key: keyof EventConfig, fieldValue: string) => {
+    onChange({ ...value, [key]: fieldValue })
+  }
+
+  return (
+    <div className="card p-6">
+      <h2 className="text-base font-bold text-navy-950">{heading}</h2>
+      <p className="mt-1 text-xs text-slate-500">
+        Manage event information and registration dates. Times use East Africa time (UTC+3).
+      </p>
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <Field label="Event title">
+          <Input value={value.title} onChange={(e) => update('title', e.target.value)} />
+        </Field>
+
+        <Field label="Scientific theme">
+          <Input value={value.theme} onChange={(e) => update('theme', e.target.value)} />
+        </Field>
+
+        <Field label="Venue">
+          <Input value={value.venue} onChange={(e) => update('venue', e.target.value)} />
+        </Field>
+
+        <Field label="Event status">
+          <select
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+            value={value.status}
+            onChange={(e) => update('status', e.target.value)}
+          >
+            <option value="scheduled">Scheduled</option>
+            <option value="postponed">Postponed</option>
+            <option value="completed">Completed</option>
+          </select>
+        </Field>
+
+        <Field label="Start date and time">
+          <Input
+            type="datetime-local"
+            value={value.startAt}
+            onChange={(e) => update('startAt', e.target.value)}
+          />
+        </Field>
+
+        <Field label="End date and time">
+          <Input
+            type="datetime-local"
+            value={value.endAt}
+            onChange={(e) => update('endAt', e.target.value)}
+          />
+        </Field>
+
+        <Field label="Registration opens">
+          <Input
+            type="datetime-local"
+            value={value.registrationOpensAt}
+            onChange={(e) => update('registrationOpensAt', e.target.value)}
+          />
+        </Field>
+
+        <Field label="Registration closes">
+          <Input
+            type="datetime-local"
+            value={value.registrationClosesAt}
+            onChange={(e) => update('registrationClosesAt', e.target.value)}
+          />
+        </Field>
+      </div>
+    </div>
+  )
+}
 export default function SettingsAdmin() {
   const { notify } = useToast()
   const { config, loading } = useConfig()
@@ -20,10 +100,21 @@ export default function SettingsAdmin() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!loading && !form) setForm({ ...config, socials: { ...config.socials }, contactPhones: [...config.contactPhones] })
-  }, [loading, config, form])
+ useEffect(() => {
+  if (!loading && !form) {
+    setForm({
+      ...config,
+      socials: { ...config.socials },
+      contactPhones: [...config.contactPhones],
+      workshop: { ...config.workshop },
+      conference: { ...config.conference },
+    })
+  }
+}, [loading, config, form])
 
+const setEvent = (eventName: 'workshop' | 'conference') =>
+  (updated: EventConfig) =>
+    setForm((f) => (f ? { ...f, [eventName]: updated } : f))
   if (loading || !form) return <Spinner label="Loading settings…" />
 
   async function save(e: React.FormEvent) {
@@ -34,7 +125,12 @@ export default function SettingsAdmin() {
     try {
       const client = requireSupabase()
       const payload = {
+        workshop: form.workshop,
+        conference: form.conference,
         currency: form.currency,
+        abstractFee: form.abstractFee,
+        abstractFeeCurrency: form.abstractFeeCurrency,
+        abstractSubmissionDeadline: form.abstractSubmissionDeadline,
         studentStandard: Number(form.studentStandard) || 50,
         nonStudentStandard: Number(form.nonStudentStandard) || 90,
         earlyBirdStudent: Number(form.earlyBirdStudent) || 40,
@@ -44,6 +140,10 @@ export default function SettingsAdmin() {
         socials: form.socials,
         contactEmail: form.contactEmail,
         contactPhones: form.contactPhones,
+        organisationName: form.organisationName,
+        teamName: form.teamName,
+        institutionName: form.institutionName,
+        campus: form.campus,
       }
       const { error: e2 } = await client
         .from('config')
@@ -88,13 +188,34 @@ export default function SettingsAdmin() {
       {error && <p className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <EventFields
+  heading="Pre-Conference Workshop"
+  value={form.workshop}
+  onChange={setEvent('workshop')}
+  
+/>
+
+<EventFields
+  heading="Main Scientific Conference"
+  value={form.conference}
+  onChange={setEvent('conference')}
+/>
         {/* Fees */}
         <div className="card p-6">
           <h2 className="text-base font-bold text-navy-950">Registration fees (main conference)</h2>
           <p className="mt-1 text-xs text-slate-500">Currency is shown to delegates exactly as configured.</p>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <Field label="Currency">
-              <Input value={form.currency} onChange={set('currency')} placeholder="USD" />
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                value={form.currency}
+                onChange={(e) =>
+                  setForm((f) => (f ? { ...f, currency: e.target.value } : f))
+                }
+              >
+                <option value="USD">USD — US Dollar</option>
+                <option value="KES">KES — Kenyan Shilling</option>
+              </select>
             </Field>
             <Field label="Early-bird deadline" help="ISO date-time (UTC). The registration page applies early-bird automatically before this moment.">
               <Input type="datetime-local" value={form.earlyBirdDeadline ? form.earlyBirdDeadline.slice(0, 16) : ''} onChange={(e) => setForm((f) => (f ? { ...f, earlyBirdDeadline: e.target.value ? new Date(e.target.value).toISOString() : null } : f))} />
@@ -128,7 +249,78 @@ export default function SettingsAdmin() {
             </Field>
           </div>
         </div>
+{/* Abstract submission settings */}
+<div className="card p-6">
+  <h2 className="text-base font-bold text-navy-950">
+    Abstract submission settings
+  </h2>
 
+  <p className="mt-1 text-xs text-slate-500">
+    Manage the abstract submission deadline and fee displayed on the public
+    Abstracts page. Leave the fee empty if submission is free or the fee is
+    yet to be confirmed.
+  </p>
+
+  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+    <Field label="Abstract submission fee">
+      <Input
+        type="number"
+        min={0}
+        value={form.abstractFee === null ? '' : String(form.abstractFee)}
+        onChange={(e) =>
+          setForm((f) =>
+            f
+              ? {
+                  ...f,
+                  abstractFee:
+                    e.target.value === '' ? null : Number(e.target.value),
+                }
+              : f,
+          )
+        }
+        placeholder="To be confirmed"
+      />
+    </Field>
+
+    <Field label="Abstract fee currency">
+      <select
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"
+        value={form.abstractFeeCurrency}
+        onChange={(e) =>
+          setForm((f) =>
+            f ? { ...f, abstractFeeCurrency: e.target.value } : f,
+          )
+        }
+      >
+        <option value="KES">KES — Kenyan Shilling</option>
+        <option value="USD">USD — US Dollar</option>
+      </select>
+    </Field>
+
+    <Field label="Abstract submission deadline">
+      <Input
+        type="datetime-local"
+        value={
+          form.abstractSubmissionDeadline
+            ? form.abstractSubmissionDeadline.slice(0, 16)
+            : ''
+        }
+        onChange={(e) =>
+          setForm((f) =>
+            f
+              ? {
+                  ...f,
+                  abstractSubmissionDeadline: e.target.value
+                    ? new Date(e.target.value).toISOString()
+                    : null,
+                }
+              : f,
+          )
+        }
+      />
+    </Field>
+  </div>
+</div>
         {/* Socials */}
         <div className="card p-6">
           <h2 className="text-base font-bold text-navy-950">Social media links</h2>
@@ -147,30 +339,79 @@ export default function SettingsAdmin() {
           </div>
         </div>
 
-        {/* Contact */}
-        <div className="card p-6 lg:col-span-2">
-          <h2 className="text-base font-bold text-navy-950">Contact details</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Used on the Contact page, footer and forms. Official details: {`${'medsamscientifcconferenceorga@gmail.com'}`}.
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Email">
-              <Input type="email" value={form.contactEmail} onChange={set('contactEmail')} />
-            </Field>
-            <div>
-              <span className="label">Phones</span>
-              <div className="space-y-2.5">
-                {form.contactPhones.map((p, i) => (
-                  <Input key={i} value={p} onChange={setPhone(i)} placeholder="+254 …" />
-                ))}
-                <button type="button" onClick={addPhone} className="text-xs font-bold text-navy-800 hover:text-gold-700">
-                  + Add another phone
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+       {/* Contact and organisation details */}
+      <div className="card p-6 lg:col-span-2">
+  <h2 className="text-base font-bold text-navy-950">
+    Organisation and contact details
+  </h2>
+
+  <p className="mt-1 text-xs text-slate-500">
+    These details appear across the public website, including the header,
+    footer and contact page.
+  </p>
+
+  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+    <Field label="Organisation name">
+      <Input
+        value={form.organisationName}
+        onChange={set('organisationName')}
+      />
+    </Field>
+
+    <Field label="Organising team name">
+      <Input
+        value={form.teamName}
+        onChange={set('teamName')}
+      />
+    </Field>
+
+    <Field label="Institution name">
+      <Input
+        value={form.institutionName}
+        onChange={set('institutionName')}
+      />
+    </Field>
+
+    <Field label="Campus">
+      <Input
+        value={form.campus}
+        onChange={set('campus')}
+      />
+    </Field>
+
+    <Field label="Official contact email">
+      <Input
+        type="email"
+        value={form.contactEmail}
+        onChange={set('contactEmail')}
+      />
+    </Field>
+
+    <div>
+      <span className="label">Contact phone numbers</span>
+
+      <div className="mt-2 space-y-2.5">
+        {form.contactPhones.map((phone, i) => (
+          <Input
+            key={i}
+            value={phone}
+            onChange={setPhone(i)}
+            placeholder={i === 0 ? 'Primary phone' : 'Secondary phone'}
+          />
+        ))}
+
+        <button
+          type="button"
+          onClick={addPhone}
+          className="text-xs font-bold text-navy-800 hover:text-gold-700"
+        >
+          + Add another phone
+        </button>
       </div>
+    </div>
+    </div>
+  </div>
+</div>
 
       <div className="mt-6 flex justify-end">
         <Button type="submit" loading={busy}>

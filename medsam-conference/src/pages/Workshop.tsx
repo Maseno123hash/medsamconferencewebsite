@@ -19,7 +19,7 @@ import {
 import { Seo } from '../components/ui/Seo'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { CountdownTimer } from '../components/ui/CountdownTimer'
-import { WORKSHOP, CONTACT, CONFERENCE } from '../lib/constants'
+import { CONTACT} from '../lib/constants'
 import hallImg from '../assets/images/conference/main-hall.jpg'
 import { useConfig } from '../hooks/useAdminAuth'
 import { formatMoney } from '../lib/utils'
@@ -41,9 +41,44 @@ const ACTIVITIES = [
 const PARTICIPATION = [
   'Open to MEDSAM members, other Maseno University students and invited participants.',
   'Registration is a single form — no account required.',
-  `Held from ${WORKSHOP.timeLabel.replace(' to ', ' – ')}.`,
+  'Workshop sessions will follow the programme communicated by the organising team.',
   'Certificates and full programme details are shared after registration.',
 ]
+function formatEventDate(value: string): string {
+  if (!value) return 'To be announced'
+
+  const normalized = value.length === 16 ? `${value}:00` : value
+  const timestamp = new Date(`${normalized}+03:00`)
+
+  if (Number.isNaN(timestamp.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Nairobi',
+  }).format(timestamp)
+}
+
+function formatEventRange(startAt: string, endAt: string): string {
+  if (!startAt) return 'Date to be announced'
+  if (!endAt) return formatEventDate(startAt)
+
+  return `${formatEventDate(startAt)} – ${formatEventDate(endAt)}`
+}
+function formatEventTime(value: string): string {
+  if (!value) return 'Time to be announced'
+
+  const normalized = value.length === 16 ? `${value}:00` : value
+  const timestamp = new Date(`${normalized}+03:00`)
+
+  if (Number.isNaN(timestamp.getTime())) return 'Time to be announced'
+
+  return new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Africa/Nairobi',
+  }).format(timestamp)
+}
 
 export default function Workshop() {
   const { config } = useConfig()
@@ -52,8 +87,8 @@ export default function Workshop() {
   return (
     <>
       <Seo
-        title="Pre-Conference Workshop"
-        description="MEDSAM Pre-Conference Workshop — 7 November 2026, 8:00 AM to 5:00 PM, Amphitheatre (South Wing), Maseno University. A limelight into the main event: learning, presentations, innovation and interaction."
+        title={config.workshop.title}
+        description={`${config.workshop.title} — ${config.workshop.theme || 'Workshop details to be announced'}. ${formatEventRange(config.workshop.startAt, config.workshop.endAt)}. ${config.workshop.venue || 'Venue to be announced'}.`}
       />
 
       {/* Hero */}
@@ -62,22 +97,22 @@ export default function Workshop() {
         <div className="absolute inset-0 bg-gradient-to-b from-navy-950/70 to-navy-950" />
         <div className="container-x relative py-20 md:py-24">
           <span className="eyebrow-light">
-            {CONFERENCE.themeTagline}
+            {config.workshop.theme || 'MEDSAM Scientific Conference & Symposium'}
           </span>
-          <h1 className="h-display max-w-3xl text-white">{WORKSHOP.name}</h1>
+          <h1 className="h-display max-w-3xl text-white">{config.workshop.title}</h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-navy-100">
             An academic and preparatory platform leading into the main conference — a day of learning, scientific
             engagement, presentations, innovation and interaction.
           </p>
           <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm font-semibold text-white">
             <span className="flex items-center gap-2.5">
-              <CalendarDays size={18} className="text-gold-400" /> {WORKSHOP.dateLabel}
+              <CalendarDays size={18} className="text-gold-400" /> {formatEventRange(config.workshop.startAt, config.workshop.endAt)}
             </span>
             <span className="flex items-center gap-2.5">
-              <Clock size={18} className="text-gold-400" /> {WORKSHOP.timeLabel}
+              <Clock size={18} className="text-gold-400" /> {formatEventTime(config.workshop.startAt)}
             </span>
             <span className="flex items-center gap-2.5">
-              <MapPin size={18} className="text-gold-400" /> {WORKSHOP.venue}
+              <MapPin size={18} className="text-gold-400" /> {config.workshop.venue || 'Venue to be announced'}
             </span>
           </div>
           <div className="mt-9 flex flex-wrap gap-4">
@@ -95,11 +130,11 @@ export default function Workshop() {
       <section className="bg-navy-900 py-14">
         <div className="container-x max-w-3xl">
           <CountdownTimer
-            targetIso={WORKSHOP.dateIso}
-            title="Until the Pre-Conference Workshop"
-            subtitle={`${WORKSHOP.dateLabel} · ${WORKSHOP.timeLabel}`}
-            pastMessage="The workshop has begun or already took place — thank you to everyone who joined!"
-          />
+          event={config.workshop}
+          title={config.workshop.title}
+          subtitle={config.workshop.venue}
+          pastMessage="The workshop has concluded. Thank you to everyone who participated!"
+        />
         </div>
       </section>
 

@@ -68,7 +68,39 @@ interface FeeLine {
   label: string
   amount: number
 }
+function getEventTimestamp(value: string): number {
+  if (!value) return NaN
+  const normalized = value.length === 16 ? `${value}:00` : value
+  return new Date(`${normalized}+03:00`).getTime()
+}
 
+function getEventAvailability(event: ReturnType<typeof useConfig>['config']['workshop']) {
+  const now = Date.now()
+  const opens = event.registrationOpensAt
+    ? getEventTimestamp(event.registrationOpensAt)
+    : NaN
+  const closes = event.registrationClosesAt
+    ? getEventTimestamp(event.registrationClosesAt)
+    : NaN
+
+  if (event.status !== 'scheduled') return 'closed'
+  if (Number.isFinite(opens) && now < opens) return 'not_open'
+  if (Number.isFinite(closes) && now > closes) return 'closed'
+
+  return 'open'
+}
+
+function displayEventDate(value: string): string {
+  if (!value) return 'To be announced'
+  const timestamp = getEventTimestamp(value)
+  if (!Number.isFinite(timestamp)) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Nairobi',
+  }).format(timestamp)
+}
 /** Fee calculation — early-bird rules come from the admin-managed config. */
 function computeFees(form: FormState, config: ReturnType<typeof useConfig>['config']): { lines: FeeLine[]; total: number; tier: 'early_bird' | 'standard' } {
   const isStudent = STUDENT_CATEGORIES.includes(form.category as (typeof STUDENT_CATEGORIES)[number])
@@ -87,7 +119,12 @@ function computeFees(form: FormState, config: ReturnType<typeof useConfig>['conf
   const lines: FeeLine[] = []
   if (form.event_selection === 'workshop' || form.event_selection === 'both') {
     const wf = config.workshopFee ?? 0
-    lines.push({ label: form.event_selection === 'both' ? 'Pre-Conference Workshop' : 'Pre-Conference Workshop (7 Nov 2026)', amount: wf })
+    lines.push({
+  label: form.event_selection === 'both'
+    ? config.workshop.title
+    : config.workshop.title,
+  amount: wf,
+})
   }
   if (form.event_selection === 'conference' || form.event_selection === 'both') {
     lines.push({
@@ -108,6 +145,12 @@ export default function Registration() {
   const { notify } = useToast()
   const navigate = useNavigate()
   const { config } = useConfig()
+  const workshopAvailability = getEventAvailability(config.workshop)
+  const conferenceAvailability = getEventAvailability(config.conference)
+
+  const bothAvailable =
+    workshopAvailability === 'open' &&
+    conferenceAvailability === 'open'
   const [form, setForm] = useState<FormState>(INITIAL)
   const [proof, setProof] = useState<File | null>(null)
   const [errors, setErrors] = useState<Partial<Record<keyof FormState | 'proof', string>>>({})
@@ -148,6 +191,17 @@ export default function Registration() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
+    const selectedEventAvailable =
+      form.event_selection === 'workshop'
+        ? workshopAvailability === 'open'
+        : form.event_selection === 'conference'
+          ? conferenceAvailability === 'open'
+          : bothAvailable
+
+    if (!selectedEventAvailable) {
+      setFatal('Registration for your selected event is currently unavailable. Please check the event deadlines.')
+      return
+    }
     if (!isSupabaseConfigured) {
       setFatal('The conference database is not connected yet. Please try again after the site is fully configured.')
       return
@@ -329,10 +383,10 @@ export default function Registration() {
   /* ---------------- Form ---------------- */
   return (
     <>
-      <Seo
+     <Seo
         title="Registration"
-        description="Register for the MEDSAM Scientific Conference & Symposium 2027 or the Pre-Conference Workshop. Students USD 50 (early bird USD 40), non-students USD 90. No account required."
-      />
+        description={`Register for the MEDSAM Scientific Conference & Symposium 2027 or the Pre-Conference Workshop. Students ${formatMoney(config.studentStandard, config.currency)} (early bird ${formatMoney(config.earlyBirdStudent, config.currency)}), non-students ${formatMoney(config.nonStudentStandard, config.currency)}. No account required.`}
+      /> 
 
       <section className="bg-navy-950 py-14 md:py-16">
         <div className="container-x">
@@ -392,6 +446,38 @@ export default function Registration() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-navy-900 text-xs font-black text-gold-400">2</span>
                 Participant category &amp; event
               </h2>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+  {[
+    { name: 'Workshop', event: config.workshop, availability: workshopAvailability },
+    { name: 'Main Conference', event: config.conference, availability: conferenceAvailability },
+  ].map(({ name, event: ev, availability }) => (
+    <div key={name} className="rounded-xl border border-slate-200 bg-white p-4">
+      <h3 className="font-bold text-navy-950">{ev.title}</h3>
+      <p className="mt-2 text-sm text-slate-600">{ev.theme || 'Theme to be announced'}</p>
+      <p className="mt-2 text-sm text-slate-700">
+        <strong>Date:</strong> {displayEventDate(ev.startAt)}
+      </p>
+      <p className="text-sm text-slate-700">
+        <strong>Venue:</strong> {ev.venue || 'To be announced'}
+      </p>
+      <p className="mt-2 text-xs text-slate-600">
+        Registration opens: {displayEventDate(ev.registrationOpensAt)}
+      </p>
+      <p className="text-xs text-slate-600">
+        Registration deadline: {displayEventDate(ev.registrationClosesAt)}
+      </p>
+      <p className={`mt-3 text-xs font-bold ${
+        availability === 'open' ? 'text-emerald-700' :
+        availability === 'not_open' ? 'text-amber-700' : 'text-red-700'
+      }`}>
+        {availability === 'open' ? 'Registration open' :
+          availability === 'not_open' ? 'Registration not yet open' :
+          ev.status === 'postponed' ? 'Event postponed' :
+          ev.status === 'completed' ? 'Event completed' : 'Registration closed'}
+      </p>
+    </div>
+  ))}
+</div>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <Field label="I am a…" required error={errors.category}>
                   <Select value={form.category} onChange={set('category')} invalid={!!errors.category}>
@@ -401,7 +487,27 @@ export default function Registration() {
                 </Field>
                 <Field label="Registering for" required error={errors.event_selection}>
                   <Select value={form.event_selection} onChange={(e) => setForm((f) => ({ ...f, event_selection: e.target.value as EventSelection }))}>
-                    {EVENTS.map((ev) => <option key={ev.id} value={ev.id}>{ev.label}</option>)}
+                    {EVENTS.map((ev) => {
+  const available =
+    ev.id === 'workshop'
+      ? workshopAvailability === 'open'
+      : ev.id === 'conference'
+        ? conferenceAvailability === 'open'
+        : bothAvailable
+
+  const eventLabel =
+    ev.id === 'workshop'
+      ? `${config.workshop.title} (${displayEventDate(config.workshop.startAt)})`
+      : ev.id === 'conference'
+        ? `${config.conference.title} (${displayEventDate(config.conference.startAt)})`
+        : `Both Events (${displayEventDate(config.workshop.startAt)} & ${displayEventDate(config.conference.startAt)})`
+
+  return (
+    <option key={ev.id} value={ev.id} disabled={!available}>
+      {eventLabel}{available ? '' : ' (Unavailable)'}
+    </option>
+  )
+})}
                   </Select>
                 </Field>
               </div>

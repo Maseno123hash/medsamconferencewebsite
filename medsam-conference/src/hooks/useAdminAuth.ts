@@ -106,19 +106,43 @@ export function useConfig(): { config: SiteConfig; loading: boolean } {
       setLoading(false)
       return
     }
+
     let mounted = true
-    supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'site')
-      .maybeSingle()
-      .then(({ data }) => {
+
+    const loadConfig = async () => {
+      try {
+        const client = supabase
+if (!client) return
+
+const { data, error } = await client
+  .from('config')
+          .select('value')
+          .eq('key', 'site')
+          .maybeSingle()
+
         if (!mounted) return
-        if (data?.value) setConfig(parseConfig(data.value))
-        setLoading(false)
-      })
+
+        if (error) {
+          console.error('Failed to load site configuration:', error)
+        } else if (data?.value) {
+          setConfig(parseConfig(data.value))
+        }
+      } catch (error) {
+        console.error('Unexpected configuration error:', error)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    void loadConfig()
+
+    const refreshInterval = window.setInterval(() => {
+      void loadConfig()
+    }, 15000)
+
     return () => {
       mounted = false
+      window.clearInterval(refreshInterval)
     }
   }, [])
 

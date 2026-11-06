@@ -23,7 +23,7 @@ import { Seo } from '../components/ui/Seo'
 import { CountdownTimer } from '../components/ui/CountdownTimer'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { TrackCard } from '../components/public/TracksSection'
-import { TRACKS, CONFERENCE, WORKSHOP, MAIN_CONFERENCE } from '../lib/constants'
+import { TRACKS, CONFERENCE } from '../lib/constants'
 import heroImg from '../assets/images/conference/hero-conference.jpg'
 import hallImg from '../assets/images/conference/main-hall.jpg'
 import { useConfig } from '../hooks/useAdminAuth'
@@ -49,7 +49,28 @@ const COMPONENTS = [
   { title: 'Exhibitions', desc: 'Sponsors, exhibitors and innovation displays on the South Wing floor.' },
   { title: 'Networking & Mentorship', desc: 'Structured student–faculty engagement and professional networking.' },
 ]
+function formatEventDate(value: string): string {
+  if (!value) return 'To be announced'
 
+  const normalized = value.length === 16 ? `${value}:00` : value
+  const timestamp = new Date(`${normalized}+03:00`)
+
+  if (Number.isNaN(timestamp.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Africa/Nairobi',
+  }).format(timestamp)
+}
+
+function formatEventRange(startAt: string, endAt: string): string {
+  if (!startAt) return 'Date to be announced'
+
+  if (!endAt) return formatEventDate(startAt)
+
+  return `${formatEventDate(startAt)} – ${formatEventDate(endAt)}`
+}
 export default function Home() {
   const { config } = useConfig()
 
@@ -57,7 +78,7 @@ export default function Home() {
     <>
       <Seo
         title="Home"
-        description="MEDSAM Scientific Conference & Symposium — Advancing Medical Science through Research, Innovation and Collaboration. 12–13 March 2027, Maseno University. Pre-Conference Workshop 7 November 2026."
+        description={`${config.conference.title} — ${config.conference.theme || 'Advancing Medical Science through Research, Innovation and Collaboration'}. ${formatEventRange(config.conference.startAt, config.conference.endAt)}. ${config.conference.venue}. Pre-Conference Workshop: ${formatEventRange(config.workshop.startAt, config.workshop.endAt)}.`}
       />
 
       {/* ───────────────────────── HERO ───────────────────────── */}
@@ -76,24 +97,27 @@ export default function Home() {
           <div className="max-w-3xl">
             <span className="eyebrow-light">
               <span className="h-1.5 w-1.5 rounded-full bg-gold-400" />
-              Maseno University · {CONFERENCE.year}
+              Maseno University · {config.conference.startAt
+  ? new Date(`${config.conference.startAt.length === 16 ? `${config.conference.startAt}:00` : config.conference.startAt}+03:00`).getFullYear()
+  : 'Date to be announced'}
             </span>
             <h1 className="mt-5 text-4xl leading-[1.05] font-black tracking-tight text-white sm:text-5xl lg:text-6xl">
-              MEDSAM Scientific
-              <span className="block text-gold-400">Conference &amp; Symposium</span>
+              Maseno University · {config.conference.startAt
+  ? new Date(`${config.conference.startAt.length === 16 ? `${config.conference.startAt}:00` : config.conference.startAt}+03:00`).getFullYear()
+  : 'Date to be announced'}
             </h1>
             <p className="mt-5 max-w-2xl border-l-4 border-gold-500 pl-4 text-lg leading-relaxed font-medium text-navy-100 sm:text-xl">
-              “{CONFERENCE.theme}.”
+              “{config.conference.theme || 'Conference theme to be announced'}.”
             </p>
 
             <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm font-semibold text-white">
               <span className="flex items-center gap-2.5">
                 <CalendarDays size={18} className="text-gold-400" />
-                {MAIN_CONFERENCE.dateLabel}
+                {formatEventRange(config.conference.startAt, config.conference.endAt)}
               </span>
               <span className="flex items-center gap-2.5">
                 <MapPin size={18} className="text-gold-400" />
-                {MAIN_CONFERENCE.venue}
+                {config.conference.venue || 'Venue to be announced'}
               </span>
               <span className="flex items-center gap-2.5">
                 <Users size={18} className="text-gold-400" />
@@ -163,16 +187,17 @@ export default function Home() {
           />
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
             <CountdownTimer
-              targetIso={WORKSHOP.dateIso}
-              title="Pre-Conference Workshop"
-              subtitle={WORKSHOP.dateLabel}
-              pastMessage="The Pre-Conference Workshop has begun or already took place. We look forward to seeing you at the Main Conference!"
+              event={config.workshop}
+              title={config.workshop.title}
+              subtitle={config.workshop.venue}
+              pastMessage="The workshop has concluded. Thank you to everyone who participated!"
             />
+
             <CountdownTimer
-              targetIso={MAIN_CONFERENCE.startIso}
-              title="Main Conference & Symposium"
-              subtitle={MAIN_CONFERENCE.dateLabel}
-              pastMessage="The Main Conference is underway or has concluded. Thank you for making it a success!"
+               event={config.conference}
+               title={config.conference.title}
+               subtitle={config.conference.venue}
+               pastMessage="The conference has concluded. Thank you to all our delegates!"
             />
           </div>
         </div>
@@ -183,12 +208,11 @@ export default function Home() {
         <div className="container-x">
           <SectionHeading
             eyebrow="The Theme"
-            title={
-              <>
-                Advancing Medical Science through <span className="text-gold-600">Research, Innovation</span> and
-                Collaboration
-              </>
-            }
+           title={
+            <>
+              {config.conference.theme || 'Conference theme to be announced'}
+            </>
+          }
             subtitle="Six scientific tracks organise the conference — choose the one that matches your work when you submit an abstract."
           />
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -210,20 +234,19 @@ export default function Home() {
               <span className="absolute top-4 left-4 rounded-full bg-gold-500 px-3.5 py-1.5 text-[11px] font-black tracking-wider text-navy-950 uppercase">
                 Workshop
               </span>
-              <h3 className="absolute bottom-4 left-5 text-2xl font-black text-white">{WORKSHOP.name}</h3>
+              <h3 className="absolute bottom-4 left-5 text-2xl font-black text-white">{config.workshop.title}</h3>
             </div>
             <div className="p-6">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-navy-800">
                 <span className="flex items-center gap-2">
-                  <CalendarDays size={16} className="text-gold-600" /> {WORKSHOP.dateLabel}
+                  <CalendarDays size={16} className="text-gold-600" /> {formatEventRange(config.workshop.startAt, config.workshop.endAt)}
                 </span>
                 <span className="flex items-center gap-2">
-                  <MapPin size={16} className="text-gold-600" /> Amphitheatre (South Wing), Maseno University
-                </span>
+                  <MapPin size={16} className="text-gold-600" />{config.workshop.venue || 'Venue to be announced'}                </span>
               </div>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
                 An academic and preparatory platform leading into the main conference — hands-on learning,
-                scientific engagement, presentations, innovation and interaction. {WORKSHOP.timeLabel}.
+                scientific engagement, presentations, innovation and interaction.{config.workshop.theme || 'Further workshop details will be announced.'} .
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link to="/workshop" className="btn btn-navy btn-sm">
@@ -250,16 +273,16 @@ export default function Home() {
                 Main Event
               </span>
               <h3 className="absolute bottom-4 left-5 text-2xl font-black text-white">
-                {MAIN_CONFERENCE.name}
+                {config.conference.title}
               </h3>
             </div>
             <div className="p-6">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-navy-800">
                 <span className="flex items-center gap-2">
-                  <CalendarDays size={16} className="text-gold-600" /> {MAIN_CONFERENCE.dateLabel}
+                  <CalendarDays size={16} className="text-gold-600" />{formatEventRange(config.conference.startAt, config.conference.endAt)}
                 </span>
                 <span className="flex items-center gap-2">
-                  <MapPin size={16} className="text-gold-600" /> {MAIN_CONFERENCE.venue}
+                  <MapPin size={16} className="text-gold-600" /> {config.conference.venue || 'Venue to be announced'}
                 </span>
                 <span className="flex items-center gap-2">
                   <Users size={16} className="text-gold-600" /> {CONFERENCE.attendance}
@@ -301,7 +324,7 @@ export default function Home() {
       <section className="relative overflow-hidden bg-navy-950 py-16 md:py-20">
         <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-gold-500/10 blur-3xl" aria-hidden="true" />
         <div className="container-x flex flex-col items-center text-center">
-          <span className="eyebrow-light">Join {CONFERENCE.attendance.toLowerCase()}</span>
+          <span className="eyebrow-light">Join the MEDSAM Scientific Community</span>
           <h2 className="max-w-2xl text-3xl font-black text-white sm:text-4xl">
             Your place at Kenya's student-led medical science platform awaits
           </h2>

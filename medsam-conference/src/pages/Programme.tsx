@@ -6,7 +6,6 @@ import { SectionHeading } from '../components/ui/SectionHeading'
 import { Spinner, ErrorState, EmptyState } from '../components/ui/Feedback'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import type { ProgrammeItem } from '../lib/types'
-import { MAIN_CONFERENCE, WORKSHOP } from '../lib/constants'
 import { formatMoney } from '../lib/utils'
 import { useConfig } from '../hooks/useAdminAuth'
 
@@ -29,6 +28,26 @@ const CATEGORY_STYLES: Record<string, string> = {
  * managed by the Secretariat in Admin → Programme. Until the final
  * programme is published, placeholder (tentative) items are shown.
  */
+function formatEventDate(value: string): string {
+  if (!value) return 'To be announced'
+
+  const normalized = value.length === 16 ? `${value}:00` : value
+  const date = new Date(`${normalized}+03:00`)
+
+  if (Number.isNaN(date.getTime())) return value
+
+  return new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeZone: 'Africa/Nairobi',
+  }).format(date)
+}
+
+function formatEventRange(startAt: string, endAt: string): string {
+  if (!startAt) return 'Date to be announced'
+  if (!endAt) return formatEventDate(startAt)
+
+  return `${formatEventDate(startAt)} – ${formatEventDate(endAt)}`
+}
 export default function Programme() {
   const { config } = useConfig()
   const [items, setItems] = useState<ProgrammeItem[]>([])
@@ -66,25 +85,37 @@ export default function Programme() {
   return (
     <>
       <Seo
-        title="Scientific Programme & Themes"
-        description="The MEDSAM 2027 scientific programme: opening ceremony, keynotes, oral and poster presentations, innovation pitches, panels and awards across six scientific tracks. 12–13 March 2027."
+        title={`Programme | ${config.conference.title}`}
+        description={`${config.conference.title}. ${config.conference.theme || 'Conference theme to be announced'}. ${formatEventRange(config.conference.startAt, config.conference.endAt)}. ${config.conference.venue || 'Venue to be announced'}.`}
       />
 
       <section className="bg-navy-950 py-16 md:py-20">
         <div className="container-x">
-          <span className="eyebrow-light">Scientific Programme</span>
-          <h1 className="h-display text-white">Conference themes &amp; programme</h1>
+         <span className="eyebrow-light">Scientific Programme</span>
+          <h1 className="h-display text-white">
+            {config.conference.title}
+          </h1>
+          <p className="mt-4 text-lg font-semibold text-gold-300">
+            {config.conference.theme || 'Conference theme to be announced'}
+          </p>
           <p className="mt-4 max-w-3xl text-lg leading-relaxed text-navy-100">
             The final programme is updated by the Secretariat as the event approaches. Everything below is
             data-driven — watch this space and the announcement bar for official programme updates.
           </p>
           <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm font-semibold text-white">
-            <span className="flex items-center gap-2.5">
-              <CalendarDays size={18} className="text-gold-400" /> {WORKSHOP.dateLabel} — Pre-Conference Workshop
+           <span className="flex items-center gap-2.5">
+              <CalendarDays size={18} className="text-gold-400" />
+              {config.workshop.title}: {formatEventRange(config.workshop.startAt, config.workshop.endAt)}
             </span>
+
             <span className="flex items-center gap-2.5">
-              <CalendarDays size={18} className="text-gold-400" /> {MAIN_CONFERENCE.dateLabel} — Main Conference
-            </span>
+              <CalendarDays size={18} className="text-gold-400" />
+              {config.conference.title}: {formatEventRange(config.conference.startAt, config.conference.endAt)}
+            </span> 
+            <p className="mt-4 flex items-center gap-2 text-sm text-navy-200">
+              <MapPin size={16} />
+              {config.conference.venue || 'Venue to be announced'}
+            </p>
           </div>
         </div>
       </section>
@@ -154,9 +185,12 @@ export default function Programme() {
           )}
 
           <div className="mt-14 rounded-2xl bg-navy-950 p-8 text-center">
-            <h2 className="text-2xl font-black text-white">Ready for {MAIN_CONFERENCE.dateLabel}?</h2>
+          <h2 className="text-2xl font-black text-white">
+            Ready for {config.conference.title}?
+          </h2>
             <p className="mx-auto mt-2 max-w-xl text-sm text-navy-200">
-              Registration is open now. Early-bird student rate: {formatMoney(config.earlyBirdStudent, config.currency)}.
+              Join us for {formatEventRange(config.conference.startAt, config.conference.endAt)}.
+Early-bird student rate: {formatMoney(config.earlyBirdStudent, config.currency)}.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link to="/registration" className="btn btn-gold">
